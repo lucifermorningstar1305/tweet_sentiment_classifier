@@ -1,0 +1,6 @@
+FROM tesseract13/twitter_sentiment:latest
+WORKDIR /work
+COPY . /work
+ENTRYPOINT ["python3", "-u", "app.py"]
+
+

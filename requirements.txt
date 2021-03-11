@@ -1,0 +1,10 @@
+numpy
+scikit-learn
+scipy
+cython
+xlrd
+nltk
+pandas
+flask
+gunicorn
+tweet-preprocessor
