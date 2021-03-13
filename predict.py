@@ -18,8 +18,7 @@ def predict(text):
 	text = pad_sequence(text)
 
 	vocab_df = pd.read_csv("./data/vocab.csv")
-	vocab = {k:v for k, v in zip(vocab_df['words'].values, vocab_df['index'].values)}
-
+	vocab = {data[0] : data[1] for data in vocab_df.values}
 	encoded_sent = encode_sentence(vocab, text)
 
 	embedd_mat = None
@@ -32,9 +31,9 @@ def predict(text):
 
 	else:
 		embedd_mat = torch.load("./MODELS/glove100d.pt", map_location=torch.device("cpu"))
-
+		
 	device = torch.device("cpu")
-	model = Classifier(len(vocab), 100, hidden_dim=128, embedd_vec=embedd_mat, device=device, is_trainable=False)
+	model = Classifier(len(vocab), 100, hidden_dim=128, embedd_vec=embedd_mat, device=device, drop_val=0.4, is_trainable=False)
 	model = load_chkpt(model, file_path="./MODELS/model.pt").to(device)
 	model.eval()
 	print("Model Load complete...")

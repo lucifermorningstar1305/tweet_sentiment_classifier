@@ -30,6 +30,8 @@ class Classifier(nn.Module):
 		self.lstm = nn.LSTM(self.embedd_dim, self.hidden_dim, num_layers=self.n_layers, batch_first=True, bidirectional=bidirectional)
 		self.linear = nn.Linear(self.num_directions * self.hidden_dim, 1)
 		self.drop = nn.Dropout(p=drop_val)
+		# self.sig = nn.Sigmoid()
+
 
 
 	def forward(self, X, X_len):
@@ -46,6 +48,7 @@ class Classifier(nn.Module):
 
 		out = self.drop(out)
 		out = self.linear(out)
+		# out = self.sig(out)
 
 		return out
 

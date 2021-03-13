@@ -6,6 +6,7 @@ import sys
 import time
 from tqdm import tqdm
 import wandb
+from collections import defaultdict
 
 
 from utils import calculate_metrics
@@ -35,7 +36,7 @@ def save_chkpt(model, optimizer, valid_loss, valid_acc, valid_f1, file_path=None
 
 
 def train(model, optimizer, train_iter, valid_iter, criterion=nn.BCEWithLogitsLoss(), epochs=20, 
-	best_valid_loss = np.float("Inf"), device=torch.device("cpu"), file_path=None, islog=None):
+	best_valid_loss = np.float("Inf"), device=torch.device("cpu"), do_clip=None, file_path=None, islog=None):
 	
 	torch.cuda.empty_cache()
 
@@ -54,6 +55,8 @@ def train(model, optimizer, train_iter, valid_iter, criterion=nn.BCEWithLogitsLo
 		vloss = []
 		vacc = []
 		vf1 = []
+
+		batch_norm = defaultdict(lambda : list())
 
 		model.train()
 
@@ -74,9 +77,22 @@ def train(model, optimizer, train_iter, valid_iter, criterion=nn.BCEWithLogitsLo
 			loss = criterion(pred, targets)
 
 			loss.backward()
+
+			if do_clip:
+				nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0, norm_type=2.0)
+
+			# Record the gradient norms
+			for layer in model.lstm.named_parameters():
+				if 'weight' in layer[0]:
+					norm_grad = layer[1].grad.norm()
+					name = layer[0].replace('weight', 'grad')
+					batch_norm[name].append(norm_grad.cpu().numpy())
+
+
 			optimizer.step()
 
 			tloss.append(loss.item())
+
 
 
 		model.eval()
@@ -123,11 +139,15 @@ def train(model, optimizer, train_iter, valid_iter, criterion=nn.BCEWithLogitsLo
 			save_chkpt(model, optimizer, vloss, vacc, vf1, file_path=file_path)
 
 
+		for k,v in batch_norm.items():
+			batch_norm[k] = np.mean(v)
+
 		if islog:
 			wandb.log({
 				'val_loss' : vloss,
 				'val_acc' : vacc,
-				'val_f1' : vf1
+				'val_f1' : vf1,
+				**batch_norm
 				})
 
 

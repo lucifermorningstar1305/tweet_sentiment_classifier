@@ -9,6 +9,7 @@ import preprocessor as tweet_preprocess
 from sklearn.metrics import accuracy_score, f1_score
 
 from src.apost import APOSTOPHES
+# from apost import APOSTOPHES
 
 def remove_emoji(text):
     emoji_pattern = re.compile("["
@@ -65,6 +66,29 @@ def preprocess_old(text):
 		print(text)
 
 
+def rectify_exagg(text):
+
+	new_text = []
+	for words in text:
+		prev_char = words[0]
+		repeat_count = 0
+		final_word = ''
+		for char in words:
+
+			if char == prev_char:
+				prev_char = char
+				repeat_count += 1
+
+				if repeat_count > 2:
+					continue
+
+			final_word += char
+			prev_char = char
+
+		new_text.append(final_word.strip())
+
+	return new_text
+
 def preprocess(text, stem=True, lemmatize=False):
 
 
@@ -74,7 +98,14 @@ def preprocess(text, stem=True, lemmatize=False):
 	text = replace_apostophes(text)
 	text = re.sub(f"[{re.escape(string.punctuation)}0-9\\r\\t\\n]", " ", text) # Remove string punctuations, numbers and other escape characters
 	text = text.split(" ")
+
 	text = list(filter(lambda x: x not in ['',' '], text))
+	
+	if len(text) == 1:
+		text = rectify_exagg([text])
+
+	elif len(text) > 1:
+		text = rectify_exagg(text)
 
 	if lemmatize:
 		text = [WordNetLemmatizer().lemmatize(w) for w in text]
@@ -83,7 +114,7 @@ def preprocess(text, stem=True, lemmatize=False):
 	if stem:
 		text = [SnowballStemmer('english').stem(w) for w in text]
 
-	text = " ".join(text)		
+	text = " ".join(text).strip()		
 
 	return text
 

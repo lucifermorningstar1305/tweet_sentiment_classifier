@@ -46,8 +46,15 @@ def setup_train(epochs, lr, tbz, vbz, seed, is_wandb=False, is_plot=True):
 
 	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-	model = Classifier(len(vocab), 100, hidden_dim=128, embedd_vec=vocab_vec, device=device, is_trainable=False)
+	model = Classifier(len(vocab), vocab_vec.size(1), hidden_dim=128, embedd_vec=vocab_vec, device=device, is_trainable=False)
 
+	for layer in model.lstm.named_parameters():
+
+		if 'weight' in layer[0]:
+			# torch.nn.init.orthogonal_(layer[1])
+			torch.nn.init.xavier_normal_(layer[1])
+
+	torch.nn.init.xavier_normal_(model.linear.weight)
 
 	if is_wandb:
 		wandb.watch(model, log='all')
@@ -59,7 +66,7 @@ def setup_train(epochs, lr, tbz, vbz, seed, is_wandb=False, is_plot=True):
 	torch.manual_seed(seed)
 
 	train_losses, valid_losses, valid_acc, valid_f1 = train(model, optimizer, train_iter, valid_iter,
-	 epochs=epochs, device=device, islog=is_wandb, file_path="../MODELS/")
+	 epochs=epochs, device=device, islog=is_wandb, do_clip = False, file_path="../MODELS/")
 
 	if is_plot:
 
@@ -111,7 +118,7 @@ def setup_test():
 		embedd_mat = torch.load("../MODELS/glove100d.pt", map_location=torch.device("cpu"))
 
 	device = torch.device("cpu")
-	model = Classifier(len(vocab), 100, hidden_dim=128, embedd_vec=embedd_mat, device=device, is_trainable=False)
+	model = Classifier(len(vocab), 100, hidden_dim=128, embedd_vec=embedd_mat, device=device, drop_val=0.4, is_trainable=False)
 	model = load_chkpt(model, file_path="../MODELS/model.pt").to(device)
 	model.eval()
 	print("Model Load complete...")
@@ -139,7 +146,7 @@ if __name__ == "__main__":
 
 	parser.add_argument('--action', '-a', help='whether to train/test the model')
 	parser.add_argument('--epochs', '-e', type=int, default=20, help='define the number of epochs')
-	parser.add_argument('--learning', '-lr', type=int, default=0.001, help='define the learning rate of the model')
+	parser.add_argument('--learning', '-lr', type=float, default=0.001, help='define the learning rate of the model')
 	parser.add_argument('--train_batch_sz', '-tbz', type=int, default=32, help='define the training batch size')
 	parser.add_argument('--valid_batch_sz', '-vbz', type=int, default=256, help='define the validation batch size')
 	parser.add_argument('--wandb', '-w', type=int, default=0, help='decide whether to use wandb for logging 0/1')
